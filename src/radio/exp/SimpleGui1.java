@@ -12,7 +12,6 @@ public class SimpleGui1 implements ActionListener{
     public static void main(String[] args)  {
        SimpleGui1 simpleGui1=new SimpleGui1();
        simpleGui1.go();
-
     }
 
     private void go(){
