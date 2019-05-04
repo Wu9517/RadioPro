@@ -3,7 +3,7 @@ package radio.exp.stream;
 import java.io.*;
 
 /**
- * 存储与恢复游戏任务-对象流（用于存储和恢复数据）
+ * 存储与恢复游戏任务-对象流（读写对象，用于存储和恢复数据）
  *
  * @author wzy
  */
