@@ -6,7 +6,7 @@ import javax.swing.*;
 /**
  * @author wzy
  */
-public class MiniMusicPlayer3 implements ControllerEventListener {
+public class MiniMusicPlayer3 {
     static JFrame f = new JFrame("My First Music Video");
     static MyDrawPanel ml;
 
@@ -63,10 +63,5 @@ public class MiniMusicPlayer3 implements ControllerEventListener {
             e.printStackTrace();
         }
         return event;
-    }
-
-    @Override
-    public void controlChange(ShortMessage event) {
-        System.out.println("la");
     }
 }

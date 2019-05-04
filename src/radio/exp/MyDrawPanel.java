@@ -18,6 +18,9 @@ public class MyDrawPanel extends JPanel implements ControllerEventListener {
         if (msg) {
             Graphics2D g2 = (Graphics2D) g;
 
+            /*g.setColor(Color.white);
+            g.fillRect(0,0,this.getWidth(),this.getHeight());*/
+
             int r = (int) (Math.random() * 250);
             int gr = (int) (Math.random() * 250);
             int b = (int) (Math.random() * 250);
