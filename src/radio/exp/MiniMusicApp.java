@@ -19,7 +19,7 @@ public class MiniMusicApp {
                 //对Track加入MidiEvent
                 //创建message
                 ShortMessage a=new ShortMessage();
-                //置入指令（指令按顺序分别是频道（代表不同乐器）、音符（0-127代表不同音高）
+                //置入指令（按顺序分别是指令、频道（代表不同乐器）、音符（0-127代表不同音高）
                 // 、音道（用多大的音道按下，0代表听不见，100中等）），144代表打开,128代表关闭
                 a.setMessage(144,1,44,100);
                 //用message创建MidiEvent
