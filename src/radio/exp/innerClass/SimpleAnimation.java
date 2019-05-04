@@ -32,7 +32,7 @@ public class SimpleAnimation {
     class MyDrawPanel extends JPanel{
         @Override
         protected void paintComponent(Graphics g) {
-            //清除移动轨迹
+            //清除移动轨迹，this.getWidth(),this.getHeight()为整块区域的宽高
             g.setColor(Color.black);
             g.fillRect(0,0,this.getWidth(),this.getHeight());
 
