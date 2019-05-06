@@ -5,6 +5,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 
 /**
@@ -52,6 +56,14 @@ public class BeatBox {
         JButton downTempo = new JButton("Temp Down");
         downTempo.addActionListener(new MyDownTempoListener());
         buttonBox.add(downTempo);
+
+        JButton saveTempo = new JButton("save");
+        saveTempo.addActionListener(new MySendListener());
+        buttonBox.add(saveTempo);
+
+        JButton readTempo = new JButton("read");
+        readTempo.addActionListener(new MyReadInListener());
+        buttonBox.add(readTempo);
 
         Box nameBox = new Box(BoxLayout.Y_AXIS);
         for (int i = 0; i < 16; i++) {
@@ -201,6 +213,58 @@ public class BeatBox {
             //节奏音子，预设为1.0，每次调整3%
             float tempoFactor = sequencer.getTempoFactor();
             sequencer.setTempoFactor((float) (tempoFactor * 0.97));
+        }
+    }
+
+    class MySendListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            JFileChooser fileSave = new JFileChooser();
+            fileSave.showSaveDialog(theFrame);
+            boolean[] checkboxState = new boolean[256];
+            for (int i = 0; i < 256; i++) {
+                JCheckBox checkBox = checkBoxes.get(i);
+                if (checkBox.isSelected()) {
+                    checkboxState[i] = true;
+                } else {
+                    checkboxState[i] = false;
+                }
+            }
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(fileSave.getSelectedFile()));
+                for (int j = 0; j < checkboxState.length; j++) {
+                    writer.write(String.valueOf(checkboxState[j]) + "\n");
+                }
+                writer.close();
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+
+
+        }
+    }
+
+    class MyReadInListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            try {
+                JFileChooser chooser = new JFileChooser();
+                chooser.showOpenDialog(theFrame);
+                BufferedReader reader = new BufferedReader(new FileReader(chooser.getSelectedFile()));
+                String line = null;
+                int index = 0;
+                while ((line = reader.readLine()) != null) {
+                    Boolean bol = Boolean.parseBoolean(line);
+                    JCheckBox checkBox = checkBoxes.get(index);
+                    checkBox.setSelected(bol);
+                    index++;
+                }
+                sequencer.stop();
+                buildTrackAndStart();
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+
         }
     }
 
