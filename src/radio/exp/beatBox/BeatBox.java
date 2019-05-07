@@ -259,6 +259,7 @@ public class BeatBox {
                     checkBox.setSelected(bol);
                     index++;
                 }
+                reader.close();
                 sequencer.stop();
                 buildTrackAndStart();
             } catch (Exception e1) {
