@@ -2,25 +2,41 @@ package radio.exp.beatBox;
 
 import javax.sound.midi.*;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.*;
+import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Vector;
 
 /**
  * @author wzy
  */
 public class BeatBox {
+    JFrame theFrame;
     JPanel mainPanel;
+    JList incomingList;
+    JTextField userMessage;
     ArrayList<JCheckBox> checkBoxes;
+
     Sequencer sequencer;
     Sequence sequence;
     Track track;
-    JFrame theFrame;
+    Sequence mySequence;
+
+    int nextNum;
+    Vector<String> listVector = new Vector<String>();
+    String userName;
+    HashMap<String, boolean[]> otherSeqsMap = new HashMap<String, boolean[]>();
+    ObjectOutputStream out;
+    ObjectInputStream in;
+
+
+
 
     //乐器名称
     String[] instrumentNames = {"Bass Drum", "Closed Hi-Hat", "Open Hi-Hat", "Acoustic Snare", "Crash Cymbal",
@@ -29,6 +45,37 @@ public class BeatBox {
 
     //实例的乐器的关键字
     int[] instruments = {35, 42, 46, 38, 49, 39, 50, 60, 70, 72, 64, 56, 58, 47, 67, 63};
+
+    public void startUp() {
+        try {
+            //设置网络、输入输出、并创建出reader的线程
+            Socket socket = new Socket("127.0.0.1", 4242);
+            out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream());
+            Thread remote = new Thread(new RemoteReader());
+            remote.start();
+            buildGUI();
+        } catch (IOException e) {
+            System.out.println("couldn't connection! you'll hava to play alone.");
+            e.printStackTrace();
+        }
+    }
+
+    public void setUpMidi() {
+        try {
+            sequencer = MidiSystem.getSequencer();
+            sequencer.open();
+            sequence = new Sequence(Sequence.PPQ, 4);
+            track = sequence.createTrack();
+            sequencer.setTempoInBPM(120);
+        } catch (MidiUnavailableException e) {
+            e.printStackTrace();
+        } catch (InvalidMidiDataException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
     public void buildGUI() {
         theFrame = new JFrame("Cyber BeatBox");
@@ -65,6 +112,20 @@ public class BeatBox {
         readTempo.addActionListener(new MyReadInListener());
         buttonBox.add(readTempo);
 
+        JButton sendIt = new JButton("sendIt");
+        sendIt.addActionListener(new MySendListener2());
+        buttonBox.add(sendIt);
+        userMessage = new JTextField();
+        buttonBox.add(userMessage);
+
+        //收到信息的组件
+        incomingList = new JList();
+        incomingList.addListSelectionListener(new MyListSelectionListener());
+        incomingList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane theList = new JScrollPane(incomingList);
+        buttonBox.add(theList);
+        incomingList.setListData(listVector);
+
         Box nameBox = new Box(BoxLayout.Y_AXIS);
         for (int i = 0; i < 16; i++) {
             nameBox.add(new Label(instrumentNames[i]));
@@ -94,20 +155,6 @@ public class BeatBox {
         //pack() 调整此窗口的大小，以适合其子组件的首选大小和布局,使用setSize()时，则不能使用该方法
         theFrame.pack();
         theFrame.setVisible(true);
-    }
-
-    public void setUpMidi() {
-        try {
-            sequencer = MidiSystem.getSequencer();
-            sequencer.open();
-            sequence = new Sequence(Sequence.PPQ, 4);
-            track = sequence.createTrack();
-            sequencer.setTempoInBPM(120);
-        } catch (MidiUnavailableException e) {
-            e.printStackTrace();
-        } catch (InvalidMidiDataException e) {
-            e.printStackTrace();
-        }
     }
 
     //将复选框状态转换为midi事件并加到Track上
@@ -269,8 +316,82 @@ public class BeatBox {
         }
     }
 
+    class MySendListener2 implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            boolean[] checkboxState = new boolean[256];
+            for (int i = 0; i < 256; i++) {
+                JCheckBox checkBox = checkBoxes.get(i);
+                if (checkBox.isSelected()) {
+                    checkboxState[i] = true;
+                }
+            }
+            String messageToSend = null;
+            try {
+                out.writeObject(userName + nextNum + "：" + userMessage.getText());
+                out.writeObject(checkboxState);
+            } catch (IOException e1) {
+                System.out.println("Couldn't send it to server");
+                e1.printStackTrace();
+            }
+            userMessage.setText("");
+        }
+    }
+
+    class MyListSelectionListener implements ListSelectionListener {
+        @Override
+        public void valueChanged(ListSelectionEvent e) {
+            if (!e.getValueIsAdjusting()) {
+                String selected = (String) incomingList.getSelectedValue();
+                if (selected != null) {
+                    //now got to the map,and change the sequence
+                    boolean[] selectedState = otherSeqsMap.get(selected);
+                    changeSequence(selectedState);
+                    sequencer.stop();
+                    buildTrackAndStart();
+                }
+            }
+        }
+    }
+
+    class RemoteReader implements Runnable {
+        boolean[] checkboxState = null;
+        String nameToShow = null;
+        Object obj = null;
+
+        @Override
+        public void run() {
+            try {
+                while ((obj = in.readObject()) != null) {
+                    System.out.println("get an object from server");
+                    System.out.println(obj.getClass());
+                    nameToShow = (String) obj;
+                    checkboxState = (boolean[]) in.readObject();
+                    otherSeqsMap.put(nameToShow, checkboxState);
+                    listVector.add(nameToShow);
+                    incomingList.setListData(listVector);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void changeSequence(boolean[] checkboxState) {
+        for (int i = 0; i < 256; i++) {
+            JCheckBox check = checkBoxes.get(i);
+            if (checkboxState[i]) {
+                check.setSelected(true);
+            } else {
+                check.setSelected(false);
+            }
+        }
+    }
+
     public static void main(String[] args) {
-        new BeatBox().buildGUI();
+        new BeatBox().startUp();
     }
 
 }
